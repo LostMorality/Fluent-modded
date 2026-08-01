@@ -284,9 +284,6 @@ function LanguageManager:BuildLanguageSection(Tab)
 	end
 
 	local Section = Tab:AddSection("Language Manager", "solar/translation-bold")
-	Section:AddSpace({ Height = 20 })
-	Section:AddDivider()
-	Section:AddSpace({ Height = 12 })
 
 	Section:AddToggle("LangManagerEnabled", {
 		Title = "Enable Auto Translator",
@@ -305,10 +302,6 @@ function LanguageManager:BuildLanguageSection(Tab)
 		end,
 	})
 
-	Section:AddSpace({ Height = 12 })
-	Section:AddDivider()
-	Section:AddSpace({ Height = 12 })
-
 	local LangDropdown = Section:AddDropdown("LangManagerDropdown", {
 		ThemedDropdown = true,
 		DropdownOutsideWindow = true,
@@ -323,8 +316,6 @@ function LanguageManager:BuildLanguageSection(Tab)
 			SelectedLang = Value
 		end,
 	})
-
-	Section:AddSpace({ Height = 6 })
 
 	local GrpBtns = Section:AddGroup({ Columns = 2, Gap = 6 })
 	local ColApply = GrpBtns:AddElement()
@@ -351,7 +342,7 @@ function LanguageManager:BuildLanguageSection(Tab)
 
 	ColReset:AddButton({
 		Title = "Reset",
-		Description = "Restore original English strings",
+		Description = "Restore original strings",
 		Icon = "solar/restart-bold",
 		Callback = function()
 			if IsTranslating then return end
