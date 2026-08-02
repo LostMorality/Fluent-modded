@@ -43,6 +43,7 @@ local SkipKeys = {
 }
 
 local Originals = {}
+local RealOptions = {}
 local Cache = {}
 local IsTranslating = false
 local CurrentLang = "en"
@@ -151,60 +152,62 @@ local function Tt(Text, Lang)
 	return Text
 end
 
-local function Snapshot(Options)
-	for Key, Elem in next, Options do
-		if SkipKeys[Key] then continue end
-		if not Originals[Key] then Originals[Key] = {} end
-		local E = Originals[Key]
+local function HookElement(Key, Elem)
+	if SkipKeys[Key] then return end
+	if Originals[Key] then return end
+	Originals[Key] = {}
+	local E = Originals[Key]
 
-		if Elem.SetTitle and E.Title == nil then
-			pcall(function()
-				local T = Elem.TitleLabel and Elem.TitleLabel.Text
-				if T and T ~= "" then E.Title = T end
-			end)
+	local OrigSetTitle = Elem.SetTitle
+	if OrigSetTitle then
+		Elem.SetTitle = function(Self, Text)
+			if not E.Title then E.Title = Text end
+			return OrigSetTitle(Self, Text)
 		end
+	end
 
-		if Elem.SetDesc and E.Desc == nil then
-			pcall(function()
-				local D = Elem.DescLabel and Elem.DescLabel.Text
-				if D and D ~= "" then E.Desc = D end
-			end)
+	local OrigSetDesc = Elem.SetDesc
+	if OrigSetDesc then
+		Elem.SetDesc = function(Self, Text)
+			if not E.Desc and Text and Text ~= "" then E.Desc = Text end
+			return OrigSetDesc(Self, Text)
 		end
+	end
 
-		if Elem.SetValues and E.Values == nil then
-			pcall(function()
-				if type(Elem.Values) == "table" and #Elem.Values > 0 then
-					local Copy = {}
-					for _, V in ipairs(Elem.Values) do
-						table.insert(Copy, V)
-					end
-					E.Values = Copy
-				end
-			end)
+	local OrigSetValues = Elem.SetValues
+	if OrigSetValues then
+		if not E.Values and type(Elem.Values) == "table" and #Elem.Values > 0 then
+			local Copy = {}
+			for _, V in ipairs(Elem.Values) do table.insert(Copy, V) end
+			E.Values = Copy
 		end
-
-		if Elem.SetValues and E.SelectedValue == nil then
-			pcall(function()
-				if Elem.Multi then
-					if type(Elem.Value) == "table" then
-						local Copy = {}
-						for K, V in next, Elem.Value do Copy[K] = V end
-						E.SelectedValue = Copy
-						E.IsMulti = true
-					end
-				else
-					if Elem.Value and Elem.Value ~= "" then
-						E.SelectedValue = Elem.Value
-						E.IsMulti = false
-					end
-				end
-			end)
+		Elem.SetValues = function(Self, NewVals)
+			return OrigSetValues(Self, NewVals)
 		end
 	end
 end
 
+local function InstallOptionsProxy(Lib)
+	RealOptions = Lib.Options
+	local Proxy = setmetatable({}, {
+		__index = RealOptions,
+		__newindex = function(_, Key, Elem)
+			RealOptions[Key] = Elem
+			if type(Elem) == "table" and not SkipKeys[Key] then
+				task.defer(function()
+					HookElement(Key, Elem)
+				end)
+			end
+		end,
+		__len = function() return #RealOptions end,
+		__next = function(_, K) return next(RealOptions, K) end,
+	})
+	Lib.Options = Proxy
+end
+
 function LanguageManager:SetLibrary(Lib)
 	self.Library = Lib
+	InstallOptionsProxy(Lib)
 end
 
 function LanguageManager:SetFolder(Folder)
@@ -240,10 +243,7 @@ function LanguageManager:ApplyAll(Lang)
 	Lang = Lang or CurrentLang
 	IsTranslating = true
 
-	local Options = self.Library.Options
-	Snapshot(Options)
-
-	for Key, Elem in next, Options do
+	for Key, Elem in next, RealOptions do
 		if SkipKeys[Key] then continue end
 		local E = Originals[Key]
 		if not E then continue end
@@ -261,32 +261,37 @@ function LanguageManager:ApplyAll(Lang)
 		end)
 
 		pcall(function()
-			if E.Values and Elem.SetValues then
-				local Translated = {}
+			if Elem.SetValues and type(Elem.Values) == "table" and #Elem.Values > 0 then
+				if not E.Values then
+					local Copy = {}
+					for _, V in ipairs(Elem.Values) do table.insert(Copy, V) end
+					E.Values = Copy
+				end
 				local OldToNew = {}
+				local Translated = {}
 				for _, V in ipairs(E.Values) do
 					local TV = Tt(V, Lang)
 					table.insert(Translated, TV)
 					OldToNew[V] = TV
 				end
 				Elem:SetValues(Translated)
-
-				if not E.IsMulti then
-					if E.SelectedValue and OldToNew[E.SelectedValue] then
-						Elem.Value = OldToNew[E.SelectedValue]
-					end
-				else
-					if type(E.SelectedValue) == "table" then
-						local NewSelected = {}
-						for K in next, E.SelectedValue do
-							local TV = OldToNew[K]
-							if TV then NewSelected[TV] = true end
+				pcall(function()
+					if not Elem.Multi then
+						if Elem.Value and OldToNew[Elem.Value] then
+							Elem.Value = OldToNew[Elem.Value]
 						end
-						Elem.Value = NewSelected
+					else
+						if type(Elem.Value) == "table" then
+							local New = {}
+							for K in next, Elem.Value do
+								local TV = OldToNew[K]
+								if TV then New[TV] = true end
+							end
+							Elem.Value = New
+						end
 					end
-				end
-
-				pcall(function() Elem:Display() end)
+					Elem:Display()
+				end)
 			end
 		end)
 
@@ -307,9 +312,8 @@ end
 
 function LanguageManager:ResetAll()
 	if not self.Library then return end
-	local Options = self.Library.Options
 
-	for Key, Elem in next, Options do
+	for Key, Elem in next, RealOptions do
 		if SkipKeys[Key] then continue end
 		local E = Originals[Key]
 		if not E then continue end
@@ -323,18 +327,21 @@ function LanguageManager:ResetAll()
 		pcall(function()
 			if E.Values and Elem.SetValues then
 				Elem:SetValues(E.Values)
-				if not E.IsMulti then
-					if E.SelectedValue then Elem.Value = E.SelectedValue end
-				else
-					if type(E.SelectedValue) == "table" then
-						local Copy = {}
-						for K, V in next, E.SelectedValue do Copy[K] = V end
-						Elem.Value = Copy
+				pcall(function()
+					if not Elem.Multi then
+						if E.SelectedValue then Elem.Value = E.SelectedValue end
+					else
+						if type(E.SelectedValue) == "table" then
+							local Copy = {}
+							for K, V in next, E.SelectedValue do Copy[K] = V end
+							Elem.Value = Copy
+						end
 					end
-				end
-				pcall(function() Elem:Display() end)
+					Elem:Display()
+				end)
 			end
 		end)
+
 		task.wait()
 	end
 
