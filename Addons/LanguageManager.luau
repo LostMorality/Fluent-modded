@@ -33,7 +33,16 @@ local LangList = {
 	{ Code = "sv",    Name = "Swedish" },
 }
 
-local Registry = {}
+local SkipKeys = {
+	LangManagerEnabled = true,
+	LangManagerDropdown = true,
+	SaveManager_ConfigName = true,
+	SaveManager_ConfigList = true,
+	FB_ConfigName = true,
+	FB_ConfigList = true,
+}
+
+local Originals = {}
 local Cache = {}
 local IsTranslating = false
 local CurrentLang = "en"
@@ -86,17 +95,18 @@ local function Fetch(Url, Method, Body)
 	if B:match("https://consent.google.com/s") then
 		HandleConsent(B)
 		Res = DoRequest({ Url = Url, Method = "GET", Headers = { cookie = "CONSENT=YES+" .. GoogleV } })
+		B = type(Res.Body) == "string" and Res.Body or ""
 	end
-	return Res
+	return B
 end
 
 local function InitSession()
 	local Ok = pcall(function()
-		local B = Fetch(RootUrl).Body or ""
+		local B = Fetch(RootUrl)
 		SessionId = B:match("\"FdrFJe\":\"(.-)\"")
 		SessionBl  = B:match("\"cfb2h\":\"(.-)\"")
 	end)
-	return Ok and SessionId and SessionBl
+	return Ok and SessionId ~= nil and SessionBl ~= nil
 end
 
 local function TranslateRaw(Text, Target)
@@ -114,31 +124,83 @@ local function TranslateRaw(Text, Target)
 		_reqid = ReqId - 10000,
 		rt = "c",
 	})
-	local Res = Fetch(Url, "POST", QStr({ ["f.req"] = HttpService:JSONEncode(Freq) }))
+	local Body = Fetch(Url, "POST", QStr({ ["f.req"] = HttpService:JSONEncode(Freq) }))
 	local Ok, Out = pcall(function()
-		local Arr = HttpService:JSONDecode((Res.Body or ""):match("%[.-%]\n"))
+		local Arr = HttpService:JSONDecode(Body:match("%[.-%]\n"))
 		return HttpService:JSONDecode(Arr[1][3])
 	end)
-	if not Ok then return nil end
+	if not Ok or not Out then return nil end
 	return Out[2][1][1][6][1][1]
 end
 
-local function TranslateText(Text, Lang)
-	if Lang == "en" or not Text or Text == "" then return Text end
-	local Prefix, Suffix, Inner = "", "", Text
-	local Pre = Text:match("^(<[^>]+>)")
-	if Pre then Prefix = Pre; Inner = Text:sub(#Pre + 1) end
-	local Suf = Inner:match("(<[^>]+>)$")
-	if Suf then Suffix = Suf; Inner = Inner:sub(1, #Inner - #Suf) end
+local function Tt(Text, Lang)
+	if not Text or Text == "" or Lang == "en" then return Text end
+	local Pre, Suf, Inner = "", "", Text
+	local P = Text:match("^(<[^>]+>)")
+	if P then Pre = P; Inner = Text:sub(#P + 1) end
+	local S = Inner:match("(<[^>]+>)$")
+	if S then Suf = S; Inner = Inner:sub(1, #Inner - #S) end
 	if Inner == "" then return Text end
 	if not Cache[Lang] then Cache[Lang] = {} end
-	if Cache[Lang][Inner] then return Prefix .. Cache[Lang][Inner] .. Suffix end
-	local Result = TranslateRaw(Inner, Lang)
-	if Result and Result ~= "" then
-		Cache[Lang][Inner] = Result
-		return Prefix .. Result .. Suffix
+	if Cache[Lang][Inner] then return Pre .. Cache[Lang][Inner] .. Suf end
+	local R = TranslateRaw(Inner, Lang)
+	if R and R ~= "" then
+		Cache[Lang][Inner] = R
+		return Pre .. R .. Suf
 	end
 	return Text
+end
+
+local function Snapshot(Options)
+	for Key, Elem in next, Options do
+		if SkipKeys[Key] then continue end
+		if not Originals[Key] then Originals[Key] = {} end
+		local E = Originals[Key]
+
+		if Elem.SetTitle and E.Title == nil then
+			pcall(function()
+				local T = Elem.TitleLabel and Elem.TitleLabel.Text
+				if T and T ~= "" then E.Title = T end
+			end)
+		end
+
+		if Elem.SetDesc and E.Desc == nil then
+			pcall(function()
+				local D = Elem.DescLabel and Elem.DescLabel.Text
+				if D and D ~= "" then E.Desc = D end
+			end)
+		end
+
+		if Elem.SetValues and E.Values == nil then
+			pcall(function()
+				if type(Elem.Values) == "table" and #Elem.Values > 0 then
+					local Copy = {}
+					for _, V in ipairs(Elem.Values) do
+						table.insert(Copy, V)
+					end
+					E.Values = Copy
+				end
+			end)
+		end
+
+		if Elem.SetValues and E.SelectedValue == nil then
+			pcall(function()
+				if Elem.Multi then
+					if type(Elem.Value) == "table" then
+						local Copy = {}
+						for K, V in next, Elem.Value do Copy[K] = V end
+						E.SelectedValue = Copy
+						E.IsMulti = true
+					end
+				else
+					if Elem.Value and Elem.Value ~= "" then
+						E.SelectedValue = Elem.Value
+						E.IsMulti = false
+					end
+				end
+			end)
+		end
+	end
 end
 
 function LanguageManager:SetLibrary(Lib)
@@ -147,100 +209,137 @@ end
 
 function LanguageManager:SetFolder(Folder)
 	self.Folder = Folder
-	self:BuildFolderTree()
-end
-
-function LanguageManager:BuildFolderTree()
 	pcall(function()
-		if not isfolder(self.Folder) then makefolder(self.Folder) end
-		local Sub = self.Folder .. "/language"
+		if not isfolder(Folder) then makefolder(Folder) end
+		local Sub = Folder .. "/language"
 		if not isfolder(Sub) then makefolder(Sub) end
 	end)
 end
 
-function LanguageManager:Register(Element, Key, Original)
-	if not Element or not Key or not Original or Original == "" then return end
-	table.insert(Registry, { Element = Element, Key = Key, Original = Original })
+local function SaveSettings(Lang, Enabled)
+	pcall(function()
+		writefile(
+			LanguageManager.Folder .. "/language/settings.json",
+			HttpService:JSONEncode({ lang = Lang, enabled = Enabled })
+		)
+	end)
 end
 
-function LanguageManager:RegisterDropdown(Dropdown, OriginalValues)
-	table.insert(Registry, {
-		IsDropdown = true,
-		Element = Dropdown,
-		Original = OriginalValues,
-		Apply = function(Lang)
-			local Translated = {}
-			for _, V in ipairs(OriginalValues) do
-				table.insert(Translated, TranslateText(V, Lang))
-			end
-			pcall(function()
-				if Dropdown.SetValues then Dropdown:SetValues(Translated)
-				else Dropdown.Values = Translated end
-			end)
-		end,
-	})
+local function LoadSettings()
+	local Ok, Data = pcall(function()
+		return HttpService:JSONDecode(readfile(LanguageManager.Folder .. "/language/settings.json"))
+	end)
+	if Ok and type(Data) == "table" then
+		return Data.lang or "en", Data.enabled ~= false
+	end
+	return "en", true
 end
 
 function LanguageManager:ApplyAll(Lang)
-	if not self.Enabled then return end
+	if not self.Enabled or not self.Library then return end
 	Lang = Lang or CurrentLang
 	IsTranslating = true
-	for _, Entry in ipairs(Registry) do
+
+	local Options = self.Library.Options
+	Snapshot(Options)
+
+	for Key, Elem in next, Options do
+		if SkipKeys[Key] then continue end
+		local E = Originals[Key]
+		if not E then continue end
+
 		pcall(function()
-			if Entry.Apply then
-				Entry.Apply(Lang)
-			else
-				local Translated = TranslateText(Entry.Original, Lang)
-				local Elem, K = Entry.Element, Entry.Key
-				if K == "Title" and Elem.SetTitle then
-					Elem:SetTitle(Translated)
-				elseif K == "Description" and Elem.SetDesc then
-					Elem:SetDesc(Translated)
-				else
-					pcall(function() Elem[K] = Translated end)
+			if E.Title and Elem.SetTitle then
+				Elem:SetTitle(Tt(E.Title, Lang))
+			end
+		end)
+
+		pcall(function()
+			if E.Desc and Elem.SetDesc then
+				Elem:SetDesc(Tt(E.Desc, Lang))
+			end
+		end)
+
+		pcall(function()
+			if E.Values and Elem.SetValues then
+				local Translated = {}
+				local OldToNew = {}
+				for _, V in ipairs(E.Values) do
+					local TV = Tt(V, Lang)
+					table.insert(Translated, TV)
+					OldToNew[V] = TV
 				end
+				Elem:SetValues(Translated)
+
+				if not E.IsMulti then
+					if E.SelectedValue and OldToNew[E.SelectedValue] then
+						Elem.Value = OldToNew[E.SelectedValue]
+					end
+				else
+					if type(E.SelectedValue) == "table" then
+						local NewSelected = {}
+						for K in next, E.SelectedValue do
+							local TV = OldToNew[K]
+							if TV then NewSelected[TV] = true end
+						end
+						Elem.Value = NewSelected
+					end
+				end
+
+				pcall(function() Elem:Display() end)
+			end
+		end)
+
+		task.wait()
+	end
+
+	CurrentLang = Lang
+	IsTranslating = false
+	SaveSettings(Lang, self.Enabled)
+
+	self.Library:Notify({
+		Title = "Language Manager",
+		Content = "Interface translated to " .. Lang,
+		SubContent = "Success",
+		Duration = 3,
+	})
+end
+
+function LanguageManager:ResetAll()
+	if not self.Library then return end
+	local Options = self.Library.Options
+
+	for Key, Elem in next, Options do
+		if SkipKeys[Key] then continue end
+		local E = Originals[Key]
+		if not E then continue end
+
+		pcall(function()
+			if E.Title and Elem.SetTitle then Elem:SetTitle(E.Title) end
+		end)
+		pcall(function()
+			if E.Desc and Elem.SetDesc then Elem:SetDesc(E.Desc) end
+		end)
+		pcall(function()
+			if E.Values and Elem.SetValues then
+				Elem:SetValues(E.Values)
+				if not E.IsMulti then
+					if E.SelectedValue then Elem.Value = E.SelectedValue end
+				else
+					if type(E.SelectedValue) == "table" then
+						local Copy = {}
+						for K, V in next, E.SelectedValue do Copy[K] = V end
+						Elem.Value = Copy
+					end
+				end
+				pcall(function() Elem:Display() end)
 			end
 		end)
 		task.wait()
 	end
-	CurrentLang = Lang
-	IsTranslating = false
-	if self.Library then
-		self.Library:Notify({
-			Title = "Language Manager",
-			Content = "Interface translated to " .. Lang,
-			SubContent = "Success",
-			Duration = 3,
-		})
-	end
-end
 
-function LanguageManager:WrapSection(Section)
-	local Wrapper = {}
-	setmetatable(Wrapper, {
-		__index = function(_, Method)
-			local Orig = Section[Method]
-			if type(Orig) ~= "function" then return Orig end
-			return function(_, ...)
-				local Args = { ... }
-				local Elem = Orig(Section, ...)
-				if type(Args[2]) == "table" then
-					local Opts = Args[2]
-					if Opts.Title and Opts.Title ~= "" then
-						LanguageManager:Register(Elem, "Title", Opts.Title)
-					end
-					if Opts.Description and Opts.Description ~= "" then
-						LanguageManager:Register(Elem, "Description", Opts.Description)
-					end
-					if Method == "AddDropdown" and type(Opts.Values) == "table" then
-						LanguageManager:RegisterDropdown(Elem, Opts.Values)
-					end
-				end
-				return Elem
-			end
-		end,
-	})
-	return Wrapper
+	CurrentLang = "en"
+	SaveSettings("en", self.Enabled)
 end
 
 function LanguageManager:BuildLanguageSection(Tab)
@@ -253,56 +352,40 @@ function LanguageManager:BuildLanguageSection(Tab)
 		CodeByName[Entry.Name] = Entry.Code
 	end
 
-	local SelectedLang = "English"
-	local SettingsPath = self.Folder .. "/language/settings.json"
-
-	local function SaveSettings(Lang, Enabled)
-		pcall(function()
-			writefile(SettingsPath, HttpService:JSONEncode({ lang = Lang, enabled = Enabled }))
-		end)
-	end
-
-	local function LoadSettings()
-		local Ok, Data = pcall(function()
-			return HttpService:JSONDecode(readfile(SettingsPath))
-		end)
-		if Ok and type(Data) == "table" then
-			return Data.lang or "en", Data.enabled ~= false
-		end
-		return "en", true
-	end
-
 	local SavedLang, SavedEnabled = LoadSettings()
 	CurrentLang = SavedLang
 	self.Enabled = SavedEnabled
 
+	local DefaultName = "English"
 	for _, Entry in ipairs(LangList) do
-		if Entry.Code == SavedLang then
-			SelectedLang = Entry.Name
-			break
-		end
+		if Entry.Code == SavedLang then DefaultName = Entry.Name; break end
 	end
+
+	local SelectedLang = DefaultName
 
 	local Section = Tab:AddSection("Language Manager", "solar/translation-bold")
 
 	Section:AddToggle("LangManagerEnabled", {
-		Title = "Enable Auto Translator",
-		Description = "Automatically translate all UI text to the selected language",
+		Title = "Enable Translator",
+		Description = "Translate all UI text to the selected language",
 		Icon = "solar/translation-bold",
 		Default = SavedEnabled,
 		Callback = function(Value)
 			self.Enabled = Value
-			SaveSettings(CurrentLang, Value)
 			if Value then
 				local Code = CodeByName[SelectedLang] or "en"
-				task.spawn(function() self:ApplyAll(Code) end)
+				SaveSettings(Code, true)
+				if Code ~= "en" then
+					task.spawn(function() self:ApplyAll(Code) end)
+				end
 			else
-				task.spawn(function() self:ApplyAll("en") end)
+				SaveSettings("en", false)
+				task.spawn(function() self:ResetAll() end)
 			end
 		end,
 	})
 
-	local LangDropdown = Section:AddDropdown("LangManagerDropdown", {
+	Section:AddDropdown("LangManagerDropdown", {
 		ThemedDropdown = true,
 		DropdownOutsideWindow = true,
 		Search = true,
@@ -311,23 +394,31 @@ function LanguageManager:BuildLanguageSection(Tab)
 		Description = "Language to translate UI into",
 		Icon = "solar/globe-bold",
 		Values = LangNames,
-		Default = SelectedLang,
+		Default = DefaultName,
 		Callback = function(Value)
 			SelectedLang = Value
+			if not self.Enabled then return end
+			local Code = CodeByName[Value] or "en"
+			SaveSettings(Code, self.Enabled)
+			if Code == "en" then
+				task.spawn(function() self:ResetAll() end)
+			else
+				task.spawn(function() self:ApplyAll(Code) end)
+			end
 		end,
 	})
 
-	local GrpBtns = Section:AddGroup({ Columns = 2, Gap = 6 })
-	local ColApply = GrpBtns:AddElement()
-	local ColReset = GrpBtns:AddElement()
+	local Grp = Section:AddGroup({ Columns = 2, Gap = 6 })
+	local ColApply = Grp:AddElement()
+	local ColReset = Grp:AddElement()
 
 	ColApply:AddButton({
 		Title = "Apply",
-		Description = "Translate UI to selected language",
+		Description = "Apply translation to all UI elements",
 		Icon = "solar/translation-bold",
 		Callback = function()
 			if IsTranslating then
-				self.Library:Notify({ Title = "Language Manager", Content = "Translation in progress...", Duration = 2 })
+				self.Library:Notify({ Title = "Language Manager", Content = "Translation in progress", Duration = 2 })
 				return
 			end
 			if not self.Enabled then
@@ -335,35 +426,24 @@ function LanguageManager:BuildLanguageSection(Tab)
 				return
 			end
 			local Code = CodeByName[SelectedLang] or "en"
-			SaveSettings(Code, self.Enabled)
 			task.spawn(function() self:ApplyAll(Code) end)
 		end,
 	})
 
 	ColReset:AddButton({
 		Title = "Reset",
-		Description = "Restore original strings",
+		Description = "Restore all original UI strings",
 		Icon = "solar/restart-bold",
 		Callback = function()
 			if IsTranslating then return end
-			SaveSettings("en", self.Enabled)
-			task.spawn(function()
-				self:ApplyAll("en")
-				SelectedLang = "English"
-				pcall(function()
-					if self.Library.Options.LangManagerDropdown then
-						self.Library.Options.LangManagerDropdown:SetValue("English")
-					end
-				end)
-			end)
+			task.spawn(function() self:ResetAll() end)
 		end,
 	})
-
-	Section:AddSpace({ Height = 20 })
 
 	task.spawn(function()
 		InitSession()
 		if SavedEnabled and SavedLang ~= "en" then
+			task.wait(1)
 			self:ApplyAll(SavedLang)
 		end
 	end)
