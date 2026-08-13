@@ -134,8 +134,15 @@ local aa = {
         local p, q, r, s = e(o.Creator), e(o.Elements), e(o.Acrylic), o.Components
         local t, u, v = e(s.Notification), p.New, protectgui or (syn and syn.protect_gui) or function()
                 end
+        if getgenv().__FluentActiveGuis then
+            for _, inst in ipairs(getgenv().__FluentActiveGuis) do
+                pcall(function() inst:Destroy() end)
+            end
+        end
+        getgenv().__FluentActiveGuis = {}
         local w = u("ScreenGui", {Parent = i:IsStudio() and j.PlayerGui or game:GetService "CoreGui"})
         v(w)
+        getgenv().__FluentActiveGuis[1] = w
         t:Init(w)
         local x = {
             Version = "1.2.0",
