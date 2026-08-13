@@ -260,12 +260,12 @@ CompSection:AddButton({
 
 local IconInfoSection = MediaTab:AddSection("Icon Packs")
 
-IconInfoSection:AddParagraph({ Title = "Solar",      Content = "solar/home-bold\ngithub.com/StyearX/Icons/tree/main/solar"     })
-IconInfoSection:AddParagraph({ Title = "Gravity",    Content = "gravity/archive\ngithub.com/StyearX/Icons/tree/main/gravity"   })
-IconInfoSection:AddParagraph({ Title = "Lucide",     Content = "lucide/home\ngithub.com/StyearX/Icons/tree/main/lucide"        })
-IconInfoSection:AddParagraph({ Title = "Craft",      Content = "craft/home\ngithub.com/StyearX/Icons/tree/main/craft"          })
-IconInfoSection:AddParagraph({ Title = "Geist",      Content = "geist/home\ngithub.com/StyearX/Icons/tree/main/geist"          })
-IconInfoSection:AddParagraph({ Title = "SF Symbols", Content = "sfsymbols/house\ngithub.com/StyearX/Icons/tree/main/sfsymbols" })
+IconInfoSection:AddParagraph({ Title = "Solar",      Content = "solar/home-bold\ngithub.com/LostMorality/Icons/tree/main/solar"     })
+IconInfoSection:AddParagraph({ Title = "Gravity",    Content = "gravity/archive\ngithub.com/LostMorality/Icons/tree/main/gravity"   })
+IconInfoSection:AddParagraph({ Title = "Lucide",     Content = "lucide/home\ngithub.com/LostMorality/Icons/tree/main/lucide"        })
+IconInfoSection:AddParagraph({ Title = "Craft",      Content = "craft/home\ngithub.com/LostMorality/Icons/tree/main/craft"          })
+IconInfoSection:AddParagraph({ Title = "Geist",      Content = "geist/home\ngithub.com/LostMorality/Icons/tree/main/geist"          })
+IconInfoSection:AddParagraph({ Title = "SF Symbols", Content = "sfsymbols/house\ngithub.com/LostMorality/Icons/tree/main/sfsymbols" })
 
 local IconDemoSection = MediaTab:AddSection("Icon Demo")
 
