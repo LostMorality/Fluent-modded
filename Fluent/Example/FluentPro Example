@@ -1066,10 +1066,10 @@ secSocial:AddParagraph({
 })
 
 secSocial:AddSocial({
-    Username = "StyearX",
-    DisplayName = "StyearX",
+    Username = "NoLifePops",
+    DisplayName = "NoLifePops",
     Platform = "GitHub",
-    ProfileUrl = "https://github.com/StyearX",
+    ProfileUrl = "https://github.com/LostMorality",
 })
 
 secSocial:AddSocial({

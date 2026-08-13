@@ -86,7 +86,7 @@ isMobile = UserInputService.TouchEnabled and not UserInputService.MouseEnabled a
 -- Create Window 
 Window = Fluent:CreateWindow({
     Title = "GoonWares",
-    SubTitle = "Made by: StyearX",
+    SubTitle = "Made by: NoLifePops",
     TabWidth = isMobile and 130 or 150,
     Tags = {
         { Text = " Testing Ui ", Color = Color3.fromRGB(211, 15, 40) },

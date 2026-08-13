@@ -259,6 +259,6 @@ MIT — [LICENSE](https://github.com/LostMorality/Fluent-modded/blob/main/LICENS
 
 ## Участники
 
-- **StyearX** — Главный Разработчик
+- **NoLifePops** — Главный Разработчик
 - **Era** — Участник
 - **EvilFishess** — Участник

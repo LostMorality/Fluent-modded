@@ -50,7 +50,7 @@ Fluent:RegisterCustomTheme("MyTheme", {
 
 local Window = Fluent:CreateWindow({
     Title            = "FluentModded",
-    SubTitle         = "dev : StyearX, EvilFish",
+    SubTitle         = "dev : NoLifePops, EvilFish",
     TabWidth         = 139,
     Size             = UDim2.fromOffset(480, 460),
     Acrylic          = true,

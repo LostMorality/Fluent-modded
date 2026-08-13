@@ -259,6 +259,6 @@ MIT — [LICENSE](https://github.com/LostMorality/Fluent-modded/blob/main/LICENS
 
 ## المساهمون
 
-- **StyearX** — المطور الرئيسي
+- **NoLifePops** — المطور الرئيسي
 - **Era** — مساهم
 - **EvilFishess** — مساهم
