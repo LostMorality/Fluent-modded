@@ -1,24 +1,24 @@
 <p align="left">
-  <a href="https://github.com/StyearX/Fluent-modded/graphs/contributors">
-    <img alt="Contributors" src="https://img.shields.io/github/contributors/StyearX/Fluent-modded" />
+  <a href="https://github.com/LostMorality/Fluent-modded/graphs/contributors">
+    <img alt="Contributors" src="https://img.shields.io/github/contributors/LostMorality/Fluent-modded" />
   </a>
-  <a href="https://github.com/StyearX/Fluent-modded/issues">
-    <img alt="Issues" src="https://img.shields.io/github/issues/StyearX/Fluent-modded?color=0088ff" />
+  <a href="https://github.com/LostMorality/Fluent-modded/issues">
+    <img alt="Issues" src="https://img.shields.io/github/issues/LostMorality/Fluent-modded?color=0088ff" />
   </a>
-  <a href="https://github.com/StyearX/Fluent-modded/pulls">
-    <img alt="Pull Requests" src="https://img.shields.io/github/issues-pr/StyearX/Fluent-modded?color=0088ff" />
+  <a href="https://github.com/LostMorality/Fluent-modded/pulls">
+    <img alt="Pull Requests" src="https://img.shields.io/github/issues-pr/LostMorality/Fluent-modded?color=0088ff" />
   </a>
-  <a href="https://github.com/StyearX/Fluent-modded/stargazers">
-    <img alt="Stars" src="https://img.shields.io/github/stars/StyearX/Fluent-modded?style=flat" />
+  <a href="https://github.com/LostMorality/Fluent-modded/stargazers">
+    <img alt="Stars" src="https://img.shields.io/github/stars/LostMorality/Fluent-modded?style=flat" />
   </a>
-  <a href="https://github.com/StyearX/Fluent-modded/network/members">
-    <img alt="Forks" src="https://img.shields.io/github/forks/StyearX/Fluent-modded?style=flat" />
+  <a href="https://github.com/LostMorality/Fluent-modded/network/members">
+    <img alt="Forks" src="https://img.shields.io/github/forks/LostMorality/Fluent-modded?style=flat" />
   </a>
-  <a href="https://github.com/StyearX/Fluent-modded">
-    <img alt="Last Commit" src="https://img.shields.io/github/last-commit/StyearX/Fluent-modded" />
+  <a href="https://github.com/LostMorality/Fluent-modded">
+    <img alt="Last Commit" src="https://img.shields.io/github/last-commit/LostMorality/Fluent-modded" />
   </a>
-  <a href="https://github.com/StyearX/Fluent-modded">
-    <img alt="Repo Size" src="https://img.shields.io/github/repo-size/StyearX/Fluent-modded" />
+  <a href="https://github.com/LostMorality/Fluent-modded">
+    <img alt="Repo Size" src="https://img.shields.io/github/repo-size/LostMorality/Fluent-modded" />
   </a>
 </p>
 
@@ -38,7 +38,7 @@ Roblox向けUIライブラリ [Fluent](https://github.com/dawid-scripts/Fluent) 
 
 ```lua
 local Fluent = loadstring(game:HttpGet(
-    "https://github.com/StyearX/Fluent-Modded/releases/download/Fluent/FluentPro"
+    "https://github.com/LostMorality/Fluent-modded/releases/download/Fluent/FluentPro"
 ))()
 
 local Window = Fluent:CreateWindow({
@@ -245,7 +245,7 @@ MediaManager:SetFolder("MyHub/MediaCache")
 
 ## ライセンス
 
-MIT — [LICENSE](https://github.com/StyearX/Fluent-modded/blob/main/LICENSE)
+MIT — [LICENSE](https://github.com/LostMorality/Fluent-modded/blob/main/LICENSE)
 
 ---
 

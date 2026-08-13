@@ -1,5 +1,5 @@
 local Fluent = loadstring(game:HttpGet(
-    "https://github.com/StyearX/Fluent-Modded/releases/download/Fluent/FluentLite"
+    "https://github.com/LostMorality/Fluent-modded/releases/download/Fluent/FluentLite"
 ))()
 
 Fluent:RegisterCustomTheme("MyTheme", {
