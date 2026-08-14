@@ -182,21 +182,21 @@ local aa = {
         local p, q, r, s = e(o.Creator), e(o.Elements), e(o.Acrylic), o.Components
         local t, u, v = e(s.Notification), p.New, protectgui or (syn and syn.protect_gui) or function()
                 end
-        if getgenv().__FluentActiveGuis then
-            for _, inst in ipairs(getgenv().__FluentActiveGuis) do
+        if getgenv().FluentGuis then
+            for _, inst in ipairs(getgenv().FluentGuis) do
                 pcall(function() inst:Destroy() end)
             end
         end
-        getgenv().__FluentActiveGuis = {}
+        getgenv().FluentGuis = {}
         local w = u("ScreenGui", {Parent = i:IsStudio() and j.PlayerGui or game:GetService "CoreGui"})
         v(w)
         local sw = u("ScreenGui", {Parent = i:IsStudio() and j.PlayerGui or game:GetService "CoreGui", DisplayOrder = 1, ZIndexBehavior = Enum.ZIndexBehavior.Sibling})
         v(sw)
         local nw = u("ScreenGui", {Parent = i:IsStudio() and j.PlayerGui or game:GetService "CoreGui", DisplayOrder = 999999, ZIndexBehavior = Enum.ZIndexBehavior.Sibling})
         v(nw)
-        getgenv().__FluentActiveGuis[1] = w
-        getgenv().__FluentActiveGuis[2] = sw
-        getgenv().__FluentActiveGuis[3] = nw
+        getgenv().FluentGuis[1] = w
+        getgenv().FluentGuis[2] = sw
+        getgenv().FluentGuis[3] = nw
         t:Init(nw)
         local x = {
             Version = "1.5.1",
